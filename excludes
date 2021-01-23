@@ -1,0 +1,11 @@
+rootfs.xz
+squashfs.manifest
+.dockerenv
+rooturl.patch
+excludes
+proc/*
+sys/*
+tmp/*
+var/cache/*
+var/log/*
+run/*
