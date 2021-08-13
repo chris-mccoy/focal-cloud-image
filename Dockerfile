@@ -49,7 +49,11 @@ RUN env DEBIAN_FRONTEND=noninteractive \
     # Allow grub installer to install when curtin runs
     echo "grub-pc grub-pc/install_devices_empty boolean false" | debconf-set-selections && \
     # Clean up local apt package files
-    apt-get autoremove --purge --assume-yes && apt-get clean
+    apt-get autoremove --purge --assume-yes && apt-get clean && \
+    # Give every machine a unique id, otherwise we get things like duplicate
+    # MAC addresses on virtual interfaces and DHCP client IDs
+	rm /etc/machine-id
+    
 # Make a nice debian package manifest list 
 RUN dpkg-query -W -f='${binary:Package}\t${Version}\n' > /squashfs.manifest
 # Finally package it all up into a squashfs image

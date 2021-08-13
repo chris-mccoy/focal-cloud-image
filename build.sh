@@ -1,4 +1,11 @@
 set -e
+set -x
+
+debug() {
+    true
+    echo $* 1>&2
+}
+
 cd $(dirname "$0")
 
 LOCK_FILE="/tmp/cloud-init-image-builder.lock"
@@ -11,10 +18,10 @@ cleanup() {
     debug "Cleaning up..."
     #exit -1
     rm -rf $TEMP_DIR 2> /dev/null
-    #rm {{ (base_dir ~ boot_ubuntu_cloud_init_image_root_filesystem) | quote }} 2> /dev/null || true
-    #rm {{ (base_dir ~ boot_ubuntu_cloud_init_image_root_filesystem_uncompressed) | quote }} 2> /dev/null || true
-    #rm {{ (base_dir ~ boot_ubuntu_cloud_image_shasum_filename) | quote }} 2> /dev/null || true
-    #rm {{ (base_dir ~ boot_ubuntu_cloud_image_shasum_signature_filename) | quote }} 2> /dev/null || true
+    rm focal-server-cloudimg-amd64-root.tar.xz 2> /dev/null || true
+    rm focal-server-cloudimg-amd64-root.tar 2> /dev/null || true
+    rm SHA256SUMS 2> /dev/null || true
+    rm SHA256SUMS.gpg 2> /dev/null || true
     if [[ "$DOCKER_BUILD_FAILED" == "0" ]]; then
         docker image rm cloud-init-image-focal:latest 2> /dev/null || true
         # if any...
@@ -35,10 +42,6 @@ warn() {
     logger -t $(basename $0) -s "$(date --rfc-3339=seconds) $1"
 }
 
-debug() {
-    echo $* 1>&2
-}
-
 if [[ -f $LOCK_FILE ]]; then
     error "Found ${LOCK_FILE}, exiting..."
 else
@@ -53,29 +56,30 @@ curl -s --output focal-server-cloudimg-amd64-root.tar.xz http://cloud-images.ubu
 debug "Downloading cloud init hash..."
 curl -s --output SHA256SUMS http://cloud-images.ubuntu.com/focal/current/SHA256SUMS
 
-#debug "Downloading cloud init hash detached signature..."
-#curl -s --output {{ (base_dir ~ boot_ubuntu_cloud_image_shasum_signature_filename) | quote }} {{ boot_ubuntu_cloud_image_shasum_signature_url | quote }}
+debug "Downloading cloud init hash detached signature..."
+curl -s --output SHA256SUMS.gpg http://cloud-images.ubuntu.com/focal/current/SHA256SUMS.gpg
 
-#debug "Verifying GPG signature of hash"
-#gpgv --keyring {{ (base_dir ~ (boot_ubuntu_cloud_image_gpg_pubkey_local_path | basename)) | quote }} {{ (base_dir ~ boot_ubuntu_cloud_image_shasum_signature_filename) | quote }} {{ (base_dir ~ boot_ubuntu_cloud_image_shasum_filename) | quote}}
-#if [[ $? -ne 0 ]]; then
-#  error "GPG did not verify signature correctly"
-#fi
+debug "Verifying GPG signature of hash"
+#gpg --no-default-keyring --keyring ./cdimage-at-ubuntu.com.gpg --keyserver keyserver.ubuntu.com --recv-keys 1A5D6C4C7DB87C81
+gpgv -q --keyring ./cdimage-at-ubuntu.com.gpg SHA256SUMS.gpg SHA256SUMS
+if [[ $? -ne 0 ]]; then
+  error "GPG did not verify signature correctly"
+fi
 
 debug "Checking hash against cloud init base image"
-#shasum -a 256 -c <(grep {{ boot_ubuntu_cloud_init_image_root_filesystem | quote }} {{ (base_dir ~ boot_ubuntu_cloud_image_shasum_filename) | quote }})
-#if [[ $? -ne 0 ]]; then
-#  error "shasum did not check against image correctly"
-#fi
+shasum -a 256 -c <(grep focal-server-cloudimg-amd64-root.tar.xz SHA256SUMS) > /dev/null
+if [[ $? -ne 0 ]]; then
+  error "shasum did not check against image correctly"
+fi
 
 # Work around docker bug where xz keeps running after build finishes
 debug "Uncompressing root filesystem to a bare tarball"
-xz --decompress --stdout  focal-server-cloudimg-amd64-root.tar.xz > focal-server-cloudimg-amd64-root.tar
-#rm {{ (base_dir ~ boot_ubuntu_cloud_init_image_root_filesystem) | quote }}
+xz --decompress --stdout focal-server-cloudimg-amd64-root.tar.xz > focal-server-cloudimg-amd64-root.tar
+rm focal-server-cloudimg-amd64-root.tar.xz
 
 debug "Starting docker build..."
 DOCKER_BUILD_FAILED=0
-if ! docker build -t cloud-init-image-focal:latest .; then
+if ! docker build -t cloud-init-image-focal:latest . > /dev/null; then 
   DOCKER_BUILD_FAILED=1
   error "Docker build failed..."
 fi
@@ -90,7 +94,7 @@ debug "Killing docker container..."
 docker kill ${DOCKER_CONTAINER_IMAGE}
 
 debug "Placing cloud-init-images so they can be served..."
-mkdir -vp $TARGET_PATH
+mkdir -vp $TARGET_PATH > /dev/null
 cp $TEMP_DIR/rootfs.xz ${TARGET_PATH}/squashfs
 cp $TEMP_DIR/squashfs.manifest ${TARGET_PATH}/squashfs.manifest
 cp $TEMP_DIR/boot/vmlinuz ${TARGET_PATH}/boot-kernel
