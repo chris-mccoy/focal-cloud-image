@@ -11,7 +11,7 @@ cd $(dirname "$0")
 LOCK_FILE="/tmp/cloud-init-image-builder.lock"
 TEMP_DIR=$(mktemp -d)
 TODAYS_DATE=$(date +"%Y%m%d")
-TARGET_PATH="/srv/deploy/www/cloud-init-images/focal/amd64/${TODAYS_DATE}"
+TARGET_PATH="/srv/data/deploy/www/cloud-init-images/focal/amd64/${TODAYS_DATE}"
 
 cleanup() {
     # TODO cmm - clean up based on build phase so artifacts are left when errors happen
