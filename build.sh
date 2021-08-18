@@ -11,7 +11,7 @@ cd $(dirname "$0")
 LOCK_FILE="/tmp/cloud-init-image-builder.lock"
 TEMP_DIR=$(mktemp -d)
 TODAYS_DATE=$(date +"%Y%m%d")
-TARGET_PATH="/srv/data/deploy/www/cloud-init-images/focal/amd64/${TODAYS_DATE}"
+TARGET_PATH="/srv/data/deploy/www/cloud-init-images/ubuntu/focal/amd64/${TODAYS_DATE}"
 
 cleanup() {
     # TODO cmm - clean up based on build phase so artifacts are left when errors happen
@@ -79,7 +79,8 @@ rm focal-server-cloudimg-amd64-root.tar.xz
 
 debug "Starting docker build..."
 DOCKER_BUILD_FAILED=0
-if ! docker build -t cloud-init-image-focal:latest . > /dev/null; then 
+#if ! docker build -t cloud-init-image-focal:latest . > /dev/null; then 
+if ! docker build -t cloud-init-image-focal:latest . ; then
   DOCKER_BUILD_FAILED=1
   error "Docker build failed..."
 fi

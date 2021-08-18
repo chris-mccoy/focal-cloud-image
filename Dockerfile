@@ -4,9 +4,9 @@ ADD focal-server-cloudimg-amd64-root.tar /
 # Files we don't want to include in the squashfs image
 ADD excludes /excludes
 # Fix apt to use local mirror with https
-RUN sed -e 's^http://archive\.ubuntu\.com^http://gringotts.chr.is^g' \
-        -e 's^http://security\.ubuntu\.com^http://gringotts.chr.is^g' \
-        -i /etc/apt/sources.list
+#RUN sed -e 's^http://archive\.ubuntu\.com^http://gringotts.chr.is^g' \
+#        -e 's^http://security\.ubuntu\.com^http://gringotts.chr.is^g' \
+#        -i /etc/apt/sources.list
 RUN env DEBIAN_FRONTEND=noninteractive \
     apt-get update --quiet && \
     apt-get upgrade --assume-yes --quiet && \
@@ -45,7 +45,7 @@ RUN env DEBIAN_FRONTEND=noninteractive \
        linux-image-generic \
        zsh squashfs-tools rsync lshw curtin netplan.io \
        dns-root-data ebtables lldpd tshark uidmap \
-       ipmitool apparmor jq zfsutils-linux zfs-zed && \
+       ipmitool apparmor jq zfsutils-linux zfs-zed libpam-ssh-agent-auth && \
     # Allow grub installer to install when curtin runs
     echo "grub-pc grub-pc/install_devices_empty boolean false" | debconf-set-selections && \
     # Clean up local apt package files
