@@ -1,6 +1,6 @@
-FROM scratch
+FROM debian:bullseye
 WORKDIR /
-ADD focal-server-cloudimg-amd64-root.tar /
+#ADD debian-11-generic-amd64.tar /
 # Files we don't want to include in the squashfs image
 ADD excludes /excludes
 # Fix apt to use local mirror with https
@@ -13,16 +13,15 @@ RUN env DEBIAN_FRONTEND=noninteractive \
     apt-get autoremove --assume-yes --purge --quiet && \
     # eatmydata speeds things up a bit
     apt-get install --assume-yes --quiet eatmydata && \
-    # Remove Canonical cruft
+    # Remove Debian cruft
     eatmydata -- apt-get remove --purge --assume-yes --quiet \
-       snapd lxcfs lxd lxd-client pollinate popularity-contest \
-       motd-news-config && \ 
+       popularity-contest && \
     # Calm grub installer since we're installing in a container
     echo "grub-pc grub-pc/install_devices_empty boolean true" | debconf-set-selections && \
     # Don't install dumpcap setuid root
     echo "wireshark-common wireshark-common/install-setuid boolean false" | debconf-set-selections && \
     # Don't look for a resume image, speeds up booting
-    echo "RESUME=none" > /etc/initramfs-tools/conf.d/resume && \
+    #echo "RESUME=none" > /etc/initramfs-tools/conf.d/resume && \
     #
     # cloud-initramfs-rooturl is the magic package that makes this 
     # possible.  Limit packages to only those required to install
@@ -30,10 +29,10 @@ RUN env DEBIAN_FRONTEND=noninteractive \
     # and requires more memory on the VM.  Let cloud-init take care
     # of the rest.
     #
-    eatmydata -- apt-get install --assume-yes --quiet \
-       -o Dpkg::Options::="--force-confdef" \
-       -o Dpkg::Options::="--force-confold" \
-       cloud-initramfs-rooturl && \
+    #eatmydata -- apt-get install --assume-yes --quiet \
+    #   -o Dpkg::Options::="--force-confdef" \
+    #   -o Dpkg::Options::="--force-confold" \
+    #   cloud-initramfs-rooturl && \
     # Patch the rooturl script to use /bin/wget instead of wget,
     # so we don't invoke busybox and instead pick up the full wget
     # and gain https support
@@ -42,17 +41,20 @@ RUN env DEBIAN_FRONTEND=noninteractive \
     eatmydata -- apt-get install --assume-yes --quiet \
        -o Dpkg::Options::="--force-confdef" \
        -o Dpkg::Options::="--force-confold" \
-       linux-image-generic \
-       zsh squashfs-tools rsync lshw curtin netplan.io \
+       linux-image-generic iproute2 \
+       zsh squashfs-tools rsync lshw live-boot live-boot-initramfs-tools \
        dns-root-data ebtables lldpd tshark uidmap \
-       ipmitool apparmor jq zfsutils-linux zfs-zed libpam-ssh-agent-auth && \
+       ipmitool apparmor jq ssh libpam-ssh-agent-auth && \
     # Allow grub installer to install when curtin runs
     echo "grub-pc grub-pc/install_devices_empty boolean false" | debconf-set-selections && \
     # Clean up local apt package files
     apt-get autoremove --purge --assume-yes && apt-get clean && \
+    # HACK cmm - REMOVE root/root
+    echo 'root:$1$ikh0dfym$QDtEHK8LD/u2acNvQ9G/P/' | chpasswd -e && \
+    true
     # Give every machine a unique id, otherwise we get things like duplicate
     # MAC addresses on virtual interfaces and DHCP client IDs
-	rm /etc/machine-id
+	#rm /etc/machine-id
     
 # Make a nice debian package manifest list 
 RUN dpkg-query -W -f='${binary:Package}\t${Version}\n' > /squashfs.manifest
