@@ -41,10 +41,10 @@ RUN env DEBIAN_FRONTEND=noninteractive \
     eatmydata -- apt-get install --assume-yes --quiet \
        -o Dpkg::Options::="--force-confdef" \
        -o Dpkg::Options::="--force-confold" \
-       linux-image-generic iproute2 \
+       linux-image-generic iproute2 ifupdown2 inetutils-ping locales-all \
        zsh squashfs-tools rsync lshw live-boot live-boot-initramfs-tools \
        dns-root-data ebtables lldpd tshark uidmap \
-       ipmitool apparmor jq ssh libpam-ssh-agent-auth && \
+       ipmitool apparmor jq ssh libpam-ssh-agent-auth cloud-init vim-tiny && \
     # Allow grub installer to install when curtin runs
     echo "grub-pc grub-pc/install_devices_empty boolean false" | debconf-set-selections && \
     # Clean up local apt package files
